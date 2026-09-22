@@ -1,0 +1,4 @@
+project_id = "monst-party-box"
+
+[functions.recognize-icons]
+verify_jwt = true
