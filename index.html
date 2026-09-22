@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>MONST BOX</title><link rel="stylesheet" href="styles.css" /></head>
+  <body>
+    <main class="shell">
+      <header><p class="eyebrow">PERSONAL PARTY BUILDER · PHASE 1</p><h1>MONST BOX</h1><p class="sub">スクショから、メイン・サブのBOXを育てよう</p></header>
+      <nav class="accounts" aria-label="アカウント選択">
+        <button class="account active" data-account="main"><span>MAIN</span><strong>メイン</strong><small></small></button>
+        <button class="account" data-account="sub"><span>SUB</span><strong>サブ</strong><small></small></button>
+      </nav>
+
+      <section class="card upload-card" aria-labelledby="upload-title">
+        <div class="section-heading"><div><p class="kicker">STEP 01</p><h2 id="upload-title">BOXスクショを追加</h2></div><span class="pill">複数枚OK</span></div>
+        <p class="muted">画像はこの端末内でプレビューします。自動候補は次の確認画面で必ず編集できます。</p>
+        <label class="dropzone" for="screenshots"><input id="screenshots" type="file" accept="image/*" multiple hidden /><span class="upload-icon">＋</span><strong>スクリーンショットを選ぶ</strong><small>PNG / JPG / WEBP</small></label>
+        <div id="selected-files" class="selected-files"></div>
+        <button id="analyse" class="primary" disabled>画像を解析して確認する</button>
+        <p id="recognition-note" class="hint"></p>
+      </section>
+
+      <section id="review-section" class="card hidden" aria-labelledby="review-title">
+        <div class="section-heading"><div><p class="kicker">STEP 02</p><h2 id="review-title">認識結果を確認</h2></div><span id="candidate-count" class="pill">0体</span></div>
+        <p class="muted">候補の数量を直し、検索からキャラを追加できます。誤認識は削除してから保存してください。</p>
+        <div id="candidate-list" class="candidate-list"></div>
+        <div class="add-character"><label for="character-search">キャラを手動追加</label><div class="search-row"><input id="character-search" placeholder="例：ルシファー" autocomplete="off" /><button id="add-character" class="secondary">追加</button></div><div id="search-results" class="search-results"></div></div>
+        <button id="save-box" class="primary">この内容をBOXへ保存</button>
+      </section>
+
+      <section class="card box-card" aria-labelledby="box-title">
+        <div class="section-heading"><div><p class="kicker">CURRENT BOX</p><h2 id="box-title">メインBOX</h2></div><span id="owned-total" class="pill">0体</span></div>
+        <input id="box-search" class="box-search" placeholder="登録済みキャラを検索" autocomplete="off" />
+        <div id="box-list" class="box-list"></div>
+      </section>
+      <p id="toast" role="status" class="toast"></p>
+    </main>
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>
