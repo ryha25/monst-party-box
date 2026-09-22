@@ -37,6 +37,10 @@
 
 GitHub Pages用の `src/supabase-config.js` には Project URL と publishable key のみを置きます。このキーはブラウザ利用を前提とした公開キーです。ユーザーBOXは、Auth と RLS を有効にした接続後にのみ保存します。
 
+### ログインの設定
+
+Supabase Dashboard の **Authentication > URL Configuration** で Site URL と Redirect URLs に `https://ryha25.github.io/monst-party-box/` を追加します。**Authentication > Providers > Email** を有効にすると、アプリ内のメールアドレス・パスワードログインが利用できます。
+
 ## テスト
 
 ```powershell
