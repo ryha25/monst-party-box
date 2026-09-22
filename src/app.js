@@ -3,6 +3,7 @@ import { boxGridRegions, createManualCharacter, emptyState, findCharacters, merg
 import { loadRemoteCharacters } from "./supabase-catalog.js";
 import { clearSession, getStoredSession, getUser, signIn, signUp } from "./supabase-auth.js";
 import { loadBox, saveBox } from "./supabase-box.js";
+import { supabaseConfig } from "./supabase-config.js";
 
 const key = "monst-party-box-phase1";
 const manualCharactersKey = "monst-party-box-manual-characters";
@@ -71,6 +72,33 @@ function renderCandidates() {
   document.querySelectorAll(".qty").forEach((input) => input.addEventListener("change", (event) => { candidates[Number(event.target.dataset.index)].quantity = Math.max(1, Number(event.target.value) || 1); renderCandidates(); }));
   document.querySelectorAll("[data-remove]").forEach((button) => button.addEventListener("click", () => { candidates.splice(Number(button.dataset.remove), 1); renderCandidates(); }));
 }
+function fingerprintCanvas(canvas) {
+  const sample = document.createElement("canvas");
+  sample.width = 9; sample.height = 8;
+  const context = sample.getContext("2d", { willReadFrequently: true });
+  context.drawImage(canvas, 0, 0, 9, 8);
+  const pixels = context.getImageData(0, 0, 9, 8).data;
+  let hash = 0n;
+  for (let y = 0; y < 8; y += 1) for (let x = 0; x < 8; x += 1) {
+    const offset = (y * 9 + x) * 4; const next = offset + 4;
+    const brightness = pixels[offset] * 0.299 + pixels[offset + 1] * 0.587 + pixels[offset + 2] * 0.114;
+    const nextBrightness = pixels[next] * 0.299 + pixels[next + 1] * 0.587 + pixels[next + 2] * 0.114;
+    hash = (hash << 1n) | BigInt(brightness > nextBrightness ? 1 : 0);
+  }
+  return hash.toString(16).padStart(16, "0");
+}
+async function matchPersonalReferences(slots) {
+  if (!session?.access_token || !slots.length) return [];
+  const response = await fetch(`${supabaseConfig.url}/functions/v1/recognize-icons`, { method: "POST", headers: { apikey: supabaseConfig.publishableKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ action: "recognize", icons: slots.map((slot) => ({ id: slot.id, fingerprint: slot.fingerprint })) }) });
+  if (!response.ok) throw new Error("照合候補を取得できませんでした");
+  return (await response.json()).matches || [];
+}
+async function storePersonalReference(slot, character) {
+  if (!session?.access_token) return;
+  const imageBase64 = slot.imageUrl.split(",")[1];
+  const response = await fetch(`${supabaseConfig.url}/functions/v1/recognize-icons`, { method: "POST", headers: { apikey: supabaseConfig.publishableKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ action: "register", reference: { characterId: character.id, characterName: character.name, fingerprint: slot.fingerprint, imageBase64 } }) });
+  if (!response.ok) throw new Error("照合用アイコンを保存できませんでした");
+}
 function loadImage(file) {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -89,10 +117,15 @@ async function createUnknownSlots(imageFiles) {
         const canvas = document.createElement("canvas");
         canvas.width = region.width; canvas.height = region.height;
         canvas.getContext("2d").drawImage(image, region.x, region.y, region.width, region.height, 0, 0, region.width, region.height);
-        slots.push({ id: `${file.name}-${index}`, imageUrl: canvas.toDataURL("image/jpeg", 0.82), added: false });
+        slots.push({ id: `${file.name}-${index}`, imageUrl: canvas.toDataURL("image/jpeg", 0.82), fingerprint: fingerprintCanvas(canvas), added: false, matches: [] });
       }
     } catch { flash(`${file.name} を読み込めませんでした`); }
   }
+  try {
+    const matches = await matchPersonalReferences(slots);
+    const byId = new Map(matches.map((match) => [match.id, match.candidates]));
+    slots.forEach((slot) => { slot.matches = byId.get(slot.id) || []; });
+  } catch { /* The manual naming path remains available offline. */ }
   return slots;
 }
 function renderUnknownSlots() {
@@ -100,7 +133,7 @@ function renderUnknownSlots() {
   if (!unknownSlots.length) { section.classList.add("hidden"); return; }
   section.classList.remove("hidden");
   $("#unknown-count").textContent = `${unknownSlots.filter((slot) => !slot.added).length}件未追加`;
-  $("#unknown-grid").innerHTML = unknownSlots.map((slot, index) => `<article class="unknown-card"><img src="${slot.imageUrl}" alt="未判別アイコン ${index + 1}">${slot.added ? `<p class="slot-added">追加済み</p>` : `<input data-slot-search="${index}" placeholder="名前を検索" autocomplete="off"><div class="slot-results" id="slot-results-${index}"></div>`}</article>`).join("");
+  $("#unknown-grid").innerHTML = unknownSlots.map((slot, index) => `<article class="unknown-card"><img src="${slot.imageUrl}" alt="未判別アイコン ${index + 1}">${slot.added ? `<p class="slot-added">追加済み</p>` : `${slot.matches.length ? `<div class="slot-results">${slot.matches.map((match, matchIndex) => `<button class="slot-result" data-slot-match="${index}" data-match-index="${matchIndex}">候補: ${match.characterName}</button>`).join("")}</div>` : ""}<input data-slot-search="${index}" placeholder="名前を検索" autocomplete="off"><div class="slot-results" id="slot-results-${index}"></div>`}</article>`).join("");
   document.querySelectorAll("[data-slot-search]").forEach((input) => input.addEventListener("input", (event) => {
     const index = Number(event.target.dataset.slotSearch);
     const matches = findCharacters(event.target.value, catalogue).slice(0, 5);
@@ -108,12 +141,21 @@ function renderUnknownSlots() {
     document.querySelectorAll("[data-slot-character]").forEach((button) => button.addEventListener("click", () => {
       candidates.push({ ...characterFor(button.dataset.character), quantity: 1, source: "manual" });
       unknownSlots[Number(button.dataset.slotCharacter)].added = true;
+      void storePersonalReference(unknownSlots[Number(button.dataset.slotCharacter)], characterFor(button.dataset.character)).catch(() => {});
       renderCandidates(); renderUnknownSlots();
     }));
     document.querySelectorAll("[data-slot-manual]").forEach((button) => button.addEventListener("click", () => {
       const character = registerManualCharacter(event.target.value);
       candidates.push({ ...character, quantity: 1, source: "manual" });
       unknownSlots[Number(button.dataset.slotManual)].added = true;
+      void storePersonalReference(unknownSlots[Number(button.dataset.slotManual)], character).catch(() => {});
+      renderCandidates(); renderUnknownSlots();
+    }));
+    document.querySelectorAll("[data-slot-match]").forEach((button) => button.addEventListener("click", () => {
+      const slotIndex = Number(button.dataset.slotMatch); const match = unknownSlots[slotIndex].matches[Number(button.dataset.matchIndex)];
+      const character = characterFor(match.characterId) || registerManualCharacter(match.characterName);
+      candidates.push({ ...character, quantity: 1, source: "manual" });
+      unknownSlots[slotIndex].added = true;
       renderCandidates(); renderUnknownSlots();
     }));
   }));
