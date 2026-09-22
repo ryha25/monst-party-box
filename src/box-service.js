@@ -35,3 +35,27 @@ export function saveCandidates(state, account, candidates) {
   next.accounts[account] = [...existing.values()];
   return next;
 }
+
+// Standard phone BOX screenshots show five icon columns. Keeping crop geometry
+// independent lets an unresolved icon be named manually today and matched by a
+// future image catalogue without changing the review flow.
+export function boxGridRegions(width, height, columns = 5, rows = 6) {
+  const left = width * 0.05;
+  const top = height * 0.305;
+  const gridWidth = width * 0.89;
+  const gridHeight = height * 0.57;
+  const cellWidth = gridWidth / columns;
+  const cellHeight = gridHeight / rows;
+  const insetX = cellWidth * 0.035;
+  const insetY = cellHeight * 0.035;
+  return Array.from({ length: columns * rows }, (_, index) => {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    return {
+      x: Math.round(left + column * cellWidth + insetX),
+      y: Math.round(top + row * cellHeight + insetY),
+      width: Math.round(cellWidth - insetX * 2),
+      height: Math.round(cellHeight - insetY * 2)
+    };
+  });
+}
