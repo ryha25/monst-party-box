@@ -28,7 +28,9 @@
 
 ### アイコン照合サーバー
 
-`202609220001_icon_catalog.sql` は照合用の基準アイコンと知覚ハッシュを管理し、原寸の画像は非公開の `character-icons` Storage bucket に置きます。`functions/recognize-icons` はブラウザが送ったアイコンの指紋に対し、上位3件の候補だけを返します。判定が弱い場合はアプリのアイコンごとの名前検索で確定します。
+`202609220001_icon_catalog.sql` は照合用の正規アイコンと知覚ハッシュを管理し、原寸の画像は非公開の `character-icons` Storage bucket に置きます。`functions/recognize-icons` はまずこの共通カタログを照合し、その後に本人が確認済みのアイコンも補助候補として照合します。ブラウザへは上位3件の候補だけを返します。判定が弱い場合はアプリのアイコンごとの名前検索で確定します。
+
+基準アイコンは、利用許諾を得た素材または自分で用意したゲーム画面素材だけを `character-icons` に登録します。第三者攻略サイトの画像を一括取得・再配布する用途には使いません。
 
 1. [Supabase](https://supabase.com/dashboard) で新しいプロジェクトを作成する。
 2. プロジェクトの SQL Editor で `supabase/migrations/` の2ファイルを古い順に実行する。
