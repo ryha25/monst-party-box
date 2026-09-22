@@ -1,6 +1,8 @@
 import { characters } from "./catalog.js";
 import { boxGridRegions, emptyState, findCharacters, mergeCandidates, recognizeFromFiles, saveCandidates } from "./box-service.js";
 import { loadRemoteCharacters } from "./supabase-catalog.js";
+import { clearSession, getStoredSession, getUser, signIn, signUp } from "./supabase-auth.js";
+import { loadBox, saveBox } from "./supabase-box.js";
 
 const key = "monst-party-box-phase1";
 let state = JSON.parse(localStorage.getItem(key) || "null") || emptyState();
@@ -9,11 +11,27 @@ let files = [];
 let candidates = [];
 let unknownSlots = [];
 let catalogue = characters;
+let session = getStoredSession();
+let user = null;
+let remoteAccounts = null;
 const $ = (selector) => document.querySelector(selector);
 
 function persist() { localStorage.setItem(key, JSON.stringify(state)); }
 function characterFor(id) { return catalogue.find((character) => character.id === id); }
 function flash(message) { const toast = $("#toast"); toast.textContent = message; toast.classList.add("show"); setTimeout(() => toast.classList.remove("show"), 2600); }
+function renderAuth() {
+  $("#auth-signed-out").classList.toggle("hidden", Boolean(user));
+  $("#auth-signed-in").classList.toggle("hidden", !user);
+  if (user) $("#signed-in-email").textContent = user.email;
+}
+async function activateSession(nextSession) {
+  session = nextSession; user = await getUser(session);
+  if (!user) throw new Error("ログイン状態を確認できませんでした");
+  const remote = await loadBox(session, user);
+  remoteAccounts = remote.accounts;
+  state = remote.state;
+  persist(); renderAuth(); renderAccount(); flash("サーバーのBOXを読み込みました");
+}
 function renderAccount() {
   document.querySelectorAll(".account").forEach((button) => { const isCurrent = button.dataset.account === account; button.classList.toggle("active", isCurrent); const count = state.accounts[button.dataset.account].reduce((sum, item) => sum + item.quantity, 0); button.querySelector("small").textContent = `${count}体登録`; });
   $("#box-title").textContent = `${account === "main" ? "メイン" : "サブ"}BOX`;
@@ -89,13 +107,20 @@ $("#character-search").addEventListener("input", (event) => {
   document.querySelectorAll("[data-character]").forEach((button) => button.addEventListener("click", () => { candidates.push({ ...characterFor(button.dataset.character), quantity: 1, source: "manual" }); $("#character-search").value = ""; $("#search-results").innerHTML = ""; renderCandidates(); }));
 });
 $("#add-character").addEventListener("click", () => { const first = findCharacters($("#character-search").value, catalogue)[0]; if (first) { candidates.push({ ...first, quantity: 1, source: "manual" }); $("#character-search").value = ""; $("#search-results").innerHTML = ""; renderCandidates(); } else flash("キャラ名を入力して候補から選んでください"); });
-$("#save-box").addEventListener("click", () => { if (!candidates.length) return flash("保存するキャラを追加してください"); state = saveCandidates(state, account, candidates); persist(); candidates = []; unknownSlots = []; files = []; $("#screenshots").value = ""; $("#selected-files").innerHTML = ""; $("#review-section").classList.add("hidden"); renderAccount(); flash(`${account === "main" ? "メイン" : "サブ"}BOXへ保存しました`); });
+$("#save-box").addEventListener("click", async () => { if (!candidates.length) return flash("保存するキャラを追加してください"); state = saveCandidates(state, account, candidates); persist(); if (session && remoteAccounts) { try { await saveBox(session, remoteAccounts, state); } catch { flash("端末には保存しました。サーバー同期は後でもう一度試します。"); } } candidates = []; unknownSlots = []; files = []; $("#screenshots").value = ""; $("#selected-files").innerHTML = ""; $("#review-section").classList.add("hidden"); renderAccount(); flash(`${account === "main" ? "メイン" : "サブ"}BOXへ保存しました`); });
 document.querySelectorAll(".account").forEach((button) => button.addEventListener("click", () => { account = button.dataset.account; renderAccount(); }));
 $("#box-search").addEventListener("input", renderBox);
+$("#sign-in").addEventListener("click", async () => { try { await activateSession(await signIn($("#auth-email").value, $("#auth-password").value)); } catch (error) { flash(error.message); } });
+$("#sign-up").addEventListener("click", async () => { try { const result = await signUp($("#auth-email").value, $("#auth-password").value); if (result.access_token) await activateSession(result); else flash("確認メールを開いた後、ログインしてください"); } catch (error) { flash(error.message); } });
+$("#sign-out").addEventListener("click", () => { clearSession(); session = null; user = null; remoteAccounts = null; renderAuth(); flash("ログアウトしました"); });
 try {
   const remoteCharacters = await loadRemoteCharacters();
   if (remoteCharacters.length) catalogue = remoteCharacters;
 } catch {
   // A local catalogue keeps the app usable until the first character import.
 }
+if (session) {
+  try { await activateSession(session); } catch { session = null; user = null; clearSession(); }
+}
+renderAuth();
 renderAccount();
