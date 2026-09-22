@@ -41,6 +41,8 @@ GitHub Pages用の `src/supabase-config.js` には Project URL と publishable k
 
 Supabase Dashboard の **Authentication > URL Configuration** で Site URL と Redirect URLs に `https://ryha25.github.io/monst-party-box/` を追加します。**Authentication > Providers > Email** を有効にすると、アプリ内のメールアドレス・パスワードログインが利用できます。
 
+キャラ名検索で候補が見つからない場合、名前をそのまま個人用キャラとして追加できます。これは端末内に保存され、公式カタログへは書き込みません。正式なキャラDB・アイコンを登録した後は、サーバー側のカタログが優先されます。
+
 ## テスト
 
 ```powershell
