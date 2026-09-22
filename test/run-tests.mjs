@@ -8,7 +8,7 @@ const cases = [
   ["main and sub boxes remain separated", () => { let state = saveCandidates(emptyState(), "main", [{ ...catalog[0], quantity: 1 }]); state = saveCandidates(state, "sub", [{ ...catalog[1], quantity: 1 }]); assert.equal(state.accounts.main[0].characterId, "lucifer"); assert.equal(state.accounts.sub[0].characterId, "mana"); }],
   ["character search supports partial Japanese names", () => assert.deepEqual(findCharacters("ルシ", catalog).map((character) => character.id), ["lucifer"])],
   ["local screenshot candidate detection leaves no network dependency", () => assert.deepEqual(recognizeFromFiles([{ name: "box_ルシファー_01.png" }], catalog).map((character) => character.id), ["lucifer"])],
-  ["BOX screenshots are split into 30 icon regions", () => { const regions = boxGridRegions(590, 1280); assert.equal(regions.length, 30); assert.ok(regions.every((region) => region.x >= 0 && region.y >= 0 && region.width > 0 && region.height > 0)); }],
+  ["BOX screenshots are split into square icon regions", () => { const regions = boxGridRegions(590, 1280); assert.equal(regions.length, 35); assert.ok(regions.every((region) => region.x >= 0 && region.y >= 0 && region.width > 0 && region.height > 0 && Math.abs(region.width - region.height) < 12)); }],
   ["unknown names become stable manual character records", () => assert.deepEqual(createManualCharacter("テストキャラ"), { id: "manual-%E3%83%86%E3%82%B9%E3%83%88%E3%82%AD%E3%83%A3%E3%83%A9", name: "テストキャラ", form: "手動登録", attribute: "?", type: "?", isManual: true })]
 ];
 
