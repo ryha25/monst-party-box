@@ -22,6 +22,11 @@
         <div class="section-heading"><div><p class="kicker">STEP 02</p><h2 id="review-title">認識結果を確認</h2></div><span id="candidate-count" class="pill">0体</span></div>
         <p class="muted">候補の数量を直し、検索からキャラを追加できます。誤認識は削除してから保存してください。</p>
         <div id="candidate-list" class="candidate-list"></div>
+        <div id="unknown-section" class="unknown-section hidden">
+          <div class="unknown-heading"><div><p class="kicker">未判別アイコン</p><h3>アイコンごとに名前を追加</h3></div><span id="unknown-count" class="pill"></span></div>
+          <p class="muted">画像だけで確定できないキャラは、ここで名前を検索して選んでください。</p>
+          <div id="unknown-grid" class="unknown-grid"></div>
+        </div>
         <div class="add-character"><label for="character-search">キャラを手動追加</label><div class="search-row"><input id="character-search" placeholder="例：ルシファー" autocomplete="off" /><button id="add-character" class="secondary">追加</button></div><div id="search-results" class="search-results"></div></div>
         <button id="save-box" class="primary">この内容をBOXへ保存</button>
       </section>
