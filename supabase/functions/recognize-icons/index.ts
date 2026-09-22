@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 type SubmittedIcon = { id: string; fingerprint: string };
-type CatalogueIcon = { character_id: string; perceptual_hash: string | null };
+type CatalogueIcon = { character_id: string; perceptual_hash: string; characters: { name: string } | null };
 type PersonalReference = { character_id: string; character_name: string; perceptual_hash: string };
 
 const corsHeaders = {
@@ -44,13 +44,24 @@ Deno.serve(async (request) => {
     const icons = body.icons?.filter((icon) => /^[0-9a-f]{16}$/i.test(icon.fingerprint)) ?? [];
     if (!icons.length) return Response.json({ error: "icons must contain 16-character hexadecimal fingerprints" }, { status: 400, headers: corsHeaders });
 
-    const { data, error } = await client.from("personal_icon_references").select("character_id, character_name, perceptual_hash").eq("user_id", authData.user.id);
-    if (error) throw error;
-    const catalogue = (data ?? []) as PersonalReference[];
+    // Officially sourced, canonical references are shared by every user. Personal
+    // references remain a helpful supplement for a screenshot's device-specific UI.
+    const [{ data: catalogueData, error: catalogueError }, { data: personalData, error: personalError }] = await Promise.all([
+      client.from("character_icons").select("character_id, perceptual_hash, characters(name)").not("perceptual_hash", "is", null),
+      client.from("personal_icon_references").select("character_id, character_name, perceptual_hash").eq("user_id", authData.user.id)
+    ]);
+    if (catalogueError) throw catalogueError;
+    if (personalError) throw personalError;
+    const canonical = (catalogueData ?? []) as CatalogueIcon[];
+    const personal = (personalData ?? []) as PersonalReference[];
+    const references = [
+      ...canonical.map((reference) => ({ characterId: reference.character_id, characterName: reference.characters?.name || reference.character_id, fingerprint: reference.perceptual_hash, source: "catalogue" })),
+      ...personal.map((reference) => ({ characterId: reference.character_id, characterName: reference.character_name, fingerprint: reference.perceptual_hash, source: "personal" }))
+    ];
     const matches = icons.map((icon) => ({
       id: icon.id,
-      candidates: catalogue
-        .map((reference) => ({ characterId: reference.character_id, characterName: reference.character_name, distance: hammingDistance(icon.fingerprint, reference.perceptual_hash) }))
+      candidates: references
+        .map((reference) => ({ characterId: reference.characterId, characterName: reference.characterName, distance: hammingDistance(icon.fingerprint, reference.fingerprint), source: reference.source }))
         .sort((a, b) => a.distance - b.distance)
         .slice(0, 3)
     }));
