@@ -1,5 +1,5 @@
 import { characters } from "./catalog.js";
-import { boxGridRegions, createManualCharacter, emptyState, findCharacters, mergeCandidates, normalize, recognizeFromFiles, saveCandidates } from "./box-service.js";
+import { boxGridRegions, createManualCharacter, emptyState, findCharacters, iconArtworkRegion, mergeCandidates, normalize, recognizeFromFiles, saveCandidates } from "./box-service.js";
 import { loadRemoteCharacters } from "./supabase-catalog.js";
 import { clearSession, getStoredSession, getUser, signIn, signUp } from "./supabase-auth.js";
 import { loadBox, saveBox } from "./supabase-box.js";
@@ -113,10 +113,12 @@ async function createUnknownSlots(imageFiles) {
   for (const file of imageFiles) {
     try {
       const image = await loadImage(file);
-      for (const [index, region] of boxGridRegions(image.naturalWidth, image.naturalHeight).entries()) {
+      for (const [index, card] of boxGridRegions(image.naturalWidth, image.naturalHeight).entries()) {
+        const region = iconArtworkRegion(card);
         const canvas = document.createElement("canvas");
-        canvas.width = region.width; canvas.height = region.height;
-        canvas.getContext("2d").drawImage(image, region.x, region.y, region.width, region.height, 0, 0, region.width, region.height);
+        // Normalising to one size makes reference hashes independent of phone resolution.
+        canvas.width = 96; canvas.height = 96;
+        canvas.getContext("2d").drawImage(image, region.x, region.y, region.width, region.height, 0, 0, 96, 96);
         slots.push({ id: `${file.name}-${index}`, imageUrl: canvas.toDataURL("image/jpeg", 0.82), fingerprint: fingerprintCanvas(canvas), added: false, matches: [] });
       }
     } catch { flash(`${file.name} を読み込めませんでした`); }
