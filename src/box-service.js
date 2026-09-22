@@ -8,6 +8,19 @@ export function findCharacters(query, catalog) {
   return catalog.filter((character) => normalize(character.name).includes(needle));
 }
 
+export function createManualCharacter(name) {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("キャラ名を入力してください");
+  return {
+    id: `manual-${encodeURIComponent(normalize(trimmed))}`,
+    name: trimmed,
+    form: "手動登録",
+    attribute: "?",
+    type: "?",
+    isManual: true
+  };
+}
+
 // Browser-only fallback: screenshots are not sent anywhere. Names included in filenames
 // are matched to the local catalogue; unmatched screenshots are intentionally left for review.
 export function recognizeFromFiles(files, catalog) {
