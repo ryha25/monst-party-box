@@ -11,6 +11,7 @@ let files = [];
 let candidates = [];
 let unknownSlots = [];
 let catalogue = characters;
+let remoteCatalogueReady = false;
 let session = getStoredSession();
 let user = null;
 let remoteAccounts = null;
@@ -24,12 +25,21 @@ function renderAuth() {
   $("#auth-signed-in").classList.toggle("hidden", !user);
   if (user) $("#signed-in-email").textContent = user.email;
 }
+function mergeBoxStates(localState, remoteState) {
+  const merged = { accounts: { main: [], sub: [] } };
+  for (const slot of ["main", "sub"]) {
+    const quantities = new Map(localState.accounts[slot].map((item) => [item.characterId, item.quantity]));
+    for (const item of remoteState.accounts[slot]) quantities.set(item.characterId, Math.max(quantities.get(item.characterId) || 0, item.quantity));
+    merged.accounts[slot] = [...quantities].map(([characterId, quantity]) => ({ characterId, quantity }));
+  }
+  return merged;
+}
 async function activateSession(nextSession) {
   session = nextSession; user = await getUser(session);
   if (!user) throw new Error("ログイン状態を確認できませんでした");
   const remote = await loadBox(session, user);
   remoteAccounts = remote.accounts;
-  state = remote.state;
+  state = mergeBoxStates(state, remote.state);
   persist(); renderAuth(); renderAccount(); flash("サーバーのBOXを読み込みました");
 }
 function renderAccount() {
@@ -107,7 +117,7 @@ $("#character-search").addEventListener("input", (event) => {
   document.querySelectorAll("[data-character]").forEach((button) => button.addEventListener("click", () => { candidates.push({ ...characterFor(button.dataset.character), quantity: 1, source: "manual" }); $("#character-search").value = ""; $("#search-results").innerHTML = ""; renderCandidates(); }));
 });
 $("#add-character").addEventListener("click", () => { const first = findCharacters($("#character-search").value, catalogue)[0]; if (first) { candidates.push({ ...first, quantity: 1, source: "manual" }); $("#character-search").value = ""; $("#search-results").innerHTML = ""; renderCandidates(); } else flash("キャラ名を入力して候補から選んでください"); });
-$("#save-box").addEventListener("click", async () => { if (!candidates.length) return flash("保存するキャラを追加してください"); state = saveCandidates(state, account, candidates); persist(); if (session && remoteAccounts) { try { await saveBox(session, remoteAccounts, state); } catch { flash("端末には保存しました。サーバー同期は後でもう一度試します。"); } } candidates = []; unknownSlots = []; files = []; $("#screenshots").value = ""; $("#selected-files").innerHTML = ""; $("#review-section").classList.add("hidden"); renderAccount(); flash(`${account === "main" ? "メイン" : "サブ"}BOXへ保存しました`); });
+$("#save-box").addEventListener("click", async () => { if (!candidates.length) return flash("保存するキャラを追加してください"); state = saveCandidates(state, account, candidates); persist(); if (session && remoteAccounts && remoteCatalogueReady) { try { await saveBox(session, remoteAccounts, state); } catch { flash("端末には保存しました。サーバー同期は後でもう一度試します。"); } } candidates = []; unknownSlots = []; files = []; $("#screenshots").value = ""; $("#selected-files").innerHTML = ""; $("#review-section").classList.add("hidden"); renderAccount(); flash(`${account === "main" ? "メイン" : "サブ"}BOXへ保存しました`); });
 document.querySelectorAll(".account").forEach((button) => button.addEventListener("click", () => { account = button.dataset.account; renderAccount(); }));
 $("#box-search").addEventListener("input", renderBox);
 $("#sign-in").addEventListener("click", async () => { try { await activateSession(await signIn($("#auth-email").value, $("#auth-password").value)); } catch (error) { flash(error.message); } });
@@ -115,7 +125,7 @@ $("#sign-up").addEventListener("click", async () => { try { const result = await
 $("#sign-out").addEventListener("click", () => { clearSession(); session = null; user = null; remoteAccounts = null; renderAuth(); flash("ログアウトしました"); });
 try {
   const remoteCharacters = await loadRemoteCharacters();
-  if (remoteCharacters.length) catalogue = remoteCharacters;
+  if (remoteCharacters.length) { catalogue = remoteCharacters; remoteCatalogueReady = true; }
 } catch {
   // A local catalogue keeps the app usable until the first character import.
 }
