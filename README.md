@@ -26,6 +26,15 @@
 
 `supabase/migrations/202609210001_phase1_box.sql` がPostgreSQL/Supabase向けのPhase 1スキーマです。`characters`（共通キャラDB）と`account_characters`（ユーザーの所持数）を分離しています。Supabaseプロジェクトへ migration を適用後、認証済みのサーバー側APIから接続してください。URLやキーはリポジトリに書かず、ホスティング環境の環境変数で渡します。
 
+### アイコン照合サーバー
+
+`202609220001_icon_catalog.sql` は照合用の基準アイコンと知覚ハッシュを管理し、原寸の画像は非公開の `character-icons` Storage bucket に置きます。`functions/recognize-icons` はブラウザが送ったアイコンの指紋に対し、上位3件の候補だけを返します。判定が弱い場合はアプリのアイコンごとの名前検索で確定します。
+
+1. [Supabase](https://supabase.com/dashboard) で新しいプロジェクトを作成する。
+2. プロジェクトの SQL Editor で `supabase/migrations/` の2ファイルを古い順に実行する。
+3. Dashboard の Project URL と anon key を、GitHub Pagesのデプロイ設定へ環境変数として設定する。
+4. service role key は Edge Function のシークレットだけに設定する。ブラウザやGitHubリポジトリには絶対に保存しない。
+
 ## テスト
 
 ```powershell
