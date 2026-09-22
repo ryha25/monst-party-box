@@ -72,3 +72,14 @@ export function boxGridRegions(width, height, columns = 5, rows = 7) {
     };
   });
 }
+
+// Keep just the character artwork. The lower edge is deliberately excluded:
+// lock, level and luck badges change from one player screenshot to another.
+export function iconArtworkRegion(card) {
+  return {
+    x: Math.round(card.x + card.width * 0.15),
+    y: Math.round(card.y + card.height * 0.12),
+    width: Math.round(card.width * 0.70),
+    height: Math.round(card.height * 0.68)
+  };
+}
