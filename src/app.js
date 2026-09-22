@@ -1,16 +1,18 @@
 import { characters } from "./catalog.js";
-import { boxGridRegions, emptyState, findCharacters, mergeCandidates, recognizeFromFiles, saveCandidates } from "./box-service.js";
+import { boxGridRegions, createManualCharacter, emptyState, findCharacters, mergeCandidates, normalize, recognizeFromFiles, saveCandidates } from "./box-service.js";
 import { loadRemoteCharacters } from "./supabase-catalog.js";
 import { clearSession, getStoredSession, getUser, signIn, signUp } from "./supabase-auth.js";
 import { loadBox, saveBox } from "./supabase-box.js";
 
 const key = "monst-party-box-phase1";
+const manualCharactersKey = "monst-party-box-manual-characters";
 let state = JSON.parse(localStorage.getItem(key) || "null") || emptyState();
 let account = "main";
 let files = [];
 let candidates = [];
 let unknownSlots = [];
-let catalogue = characters;
+let manualCharacters = JSON.parse(localStorage.getItem(manualCharactersKey) || "[]");
+let catalogue = [...characters, ...manualCharacters];
 let remoteCatalogueReady = false;
 let session = getStoredSession();
 let user = null;
@@ -18,6 +20,15 @@ let remoteAccounts = null;
 const $ = (selector) => document.querySelector(selector);
 
 function persist() { localStorage.setItem(key, JSON.stringify(state)); }
+function registerManualCharacter(name) {
+  const existing = catalogue.find((character) => normalize(character.name) === normalize(name));
+  if (existing) return existing;
+  const character = createManualCharacter(name);
+  manualCharacters = [...manualCharacters, character];
+  localStorage.setItem(manualCharactersKey, JSON.stringify(manualCharacters));
+  catalogue = [...catalogue, character];
+  return character;
+}
 function characterFor(id) { return catalogue.find((character) => character.id === id); }
 function flash(message) { const toast = $("#toast"); toast.textContent = message; toast.classList.add("show"); setTimeout(() => toast.classList.remove("show"), 2600); }
 function renderAuth() {
@@ -93,10 +104,16 @@ function renderUnknownSlots() {
   document.querySelectorAll("[data-slot-search]").forEach((input) => input.addEventListener("input", (event) => {
     const index = Number(event.target.dataset.slotSearch);
     const matches = findCharacters(event.target.value, catalogue).slice(0, 5);
-    $(`#slot-results-${index}`).innerHTML = matches.map((character) => `<button class="slot-result" data-slot-character="${index}" data-character="${character.id}">${character.name} <small>${character.form}</small></button>`).join("");
+    $(`#slot-results-${index}`).innerHTML = matches.length ? matches.map((character) => `<button class="slot-result" data-slot-character="${index}" data-character="${character.id}">${character.name} <small>${character.form}</small></button>`).join("") : event.target.value.trim() ? `<button class="slot-result" data-slot-manual="${index}">「${event.target.value.trim()}」を追加</button>` : "";
     document.querySelectorAll("[data-slot-character]").forEach((button) => button.addEventListener("click", () => {
       candidates.push({ ...characterFor(button.dataset.character), quantity: 1, source: "manual" });
       unknownSlots[Number(button.dataset.slotCharacter)].added = true;
+      renderCandidates(); renderUnknownSlots();
+    }));
+    document.querySelectorAll("[data-slot-manual]").forEach((button) => button.addEventListener("click", () => {
+      const character = registerManualCharacter(event.target.value);
+      candidates.push({ ...character, quantity: 1, source: "manual" });
+      unknownSlots[Number(button.dataset.slotManual)].added = true;
       renderCandidates(); renderUnknownSlots();
     }));
   }));
@@ -116,7 +133,7 @@ $("#character-search").addEventListener("input", (event) => {
   const result = findCharacters(event.target.value, catalogue); $("#search-results").innerHTML = result.map((character) => `<button class="result" data-character="${character.id}">${character.name} <small>(${character.form})</small></button>`).join("");
   document.querySelectorAll("[data-character]").forEach((button) => button.addEventListener("click", () => { candidates.push({ ...characterFor(button.dataset.character), quantity: 1, source: "manual" }); $("#character-search").value = ""; $("#search-results").innerHTML = ""; renderCandidates(); }));
 });
-$("#add-character").addEventListener("click", () => { const first = findCharacters($("#character-search").value, catalogue)[0]; if (first) { candidates.push({ ...first, quantity: 1, source: "manual" }); $("#character-search").value = ""; $("#search-results").innerHTML = ""; renderCandidates(); } else flash("キャラ名を入力して候補から選んでください"); });
+$("#add-character").addEventListener("click", () => { try { const name = $("#character-search").value; const first = findCharacters(name, catalogue)[0] || registerManualCharacter(name); candidates.push({ ...first, quantity: 1, source: "manual" }); $("#character-search").value = ""; $("#search-results").innerHTML = ""; renderCandidates(); } catch (error) { flash(error.message); } });
 $("#save-box").addEventListener("click", async () => { if (!candidates.length) return flash("保存するキャラを追加してください"); state = saveCandidates(state, account, candidates); persist(); if (session && remoteAccounts && remoteCatalogueReady) { try { await saveBox(session, remoteAccounts, state); } catch { flash("端末には保存しました。サーバー同期は後でもう一度試します。"); } } candidates = []; unknownSlots = []; files = []; $("#screenshots").value = ""; $("#selected-files").innerHTML = ""; $("#review-section").classList.add("hidden"); renderAccount(); flash(`${account === "main" ? "メイン" : "サブ"}BOXへ保存しました`); });
 document.querySelectorAll(".account").forEach((button) => button.addEventListener("click", () => { account = button.dataset.account; renderAccount(); }));
 $("#box-search").addEventListener("input", renderBox);
@@ -125,7 +142,7 @@ $("#sign-up").addEventListener("click", async () => { try { const result = await
 $("#sign-out").addEventListener("click", () => { clearSession(); session = null; user = null; remoteAccounts = null; renderAuth(); flash("ログアウトしました"); });
 try {
   const remoteCharacters = await loadRemoteCharacters();
-  if (remoteCharacters.length) { catalogue = remoteCharacters; remoteCatalogueReady = true; }
+  if (remoteCharacters.length) { catalogue = [...remoteCharacters, ...manualCharacters]; remoteCatalogueReady = true; }
 } catch {
   // A local catalogue keeps the app usable until the first character import.
 }
