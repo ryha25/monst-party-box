@@ -34,7 +34,7 @@ export async function loadBox(session, user) {
 
 export async function saveBox(session, accounts, state) {
   for (const account of accounts) {
-    const entries = state.accounts[account.slot];
+    const entries = state.accounts[account.slot].filter((entry) => !entry.characterId.startsWith("manual-"));
     if (!entries.length) continue;
     await request("account_characters?on_conflict=account_id,character_id", session, {
       method: "POST",
