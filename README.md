@@ -35,6 +35,8 @@
 3. Dashboard の Project URL と anon key を、GitHub Pagesのデプロイ設定へ環境変数として設定する。
 4. service role key は Edge Function のシークレットだけに設定する。ブラウザやGitHubリポジトリには絶対に保存しない。
 
+GitHub Pages用の `src/supabase-config.js` には Project URL と publishable key のみを置きます。このキーはブラウザ利用を前提とした公開キーです。ユーザーBOXは、Auth と RLS を有効にした接続後にのみ保存します。
+
 ## テスト
 
 ```powershell
