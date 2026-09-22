@@ -4,6 +4,10 @@
   <body>
     <main class="shell">
       <header><p class="eyebrow">PERSONAL PARTY BUILDER · PHASE 1</p><h1>MONST BOX</h1><p class="sub">スクショから、メイン・サブのBOXを育てよう</p></header>
+      <section id="auth-card" class="card auth-card">
+        <div id="auth-signed-out"><p class="kicker">SYNC</p><h2>ログインしてBOXを引き継ぐ</h2><p class="muted">メールアドレスでログインすると、端末を変えてもBOXを使えます。</p><input id="auth-email" type="email" autocomplete="email" placeholder="メールアドレス" /><input id="auth-password" type="password" autocomplete="current-password" placeholder="パスワード（6文字以上）" /><div class="auth-actions"><button id="sign-in" class="secondary">ログイン</button><button id="sign-up" class="primary">新規登録</button></div></div>
+        <div id="auth-signed-in" class="hidden"><p class="kicker">SYNC READY</p><strong id="signed-in-email"></strong><p class="muted">このアカウントのBOXをSupabaseへ同期します。</p><button id="sign-out" class="secondary">ログアウト</button></div>
+      </section>
       <nav class="accounts" aria-label="アカウント選択">
         <button class="account active" data-account="main"><span>MAIN</span><strong>メイン</strong><small></small></button>
         <button class="account" data-account="sub"><span>SUB</span><strong>サブ</strong><small></small></button>
