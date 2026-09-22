@@ -83,3 +83,19 @@ export function iconArtworkRegion(card) {
     height: Math.round(card.height * 0.68)
   };
 }
+
+// Unobtained monsters in the picture book are rendered nearly monochrome.
+// This works on the inner art only, so a colourful card frame cannot cause a
+// greyed-out character to be imported by mistake.
+export function isLikelyColorIcon(rgbaPixels) {
+  let meaningful = 0;
+  let colourful = 0;
+  for (let index = 0; index < rgbaPixels.length; index += 4) {
+    const red = rgbaPixels[index]; const green = rgbaPixels[index + 1]; const blue = rgbaPixels[index + 2];
+    const maximum = Math.max(red, green, blue); const minimum = Math.min(red, green, blue);
+    if (maximum < 42 || maximum > 245) continue;
+    meaningful += 1;
+    if (maximum - minimum >= 38) colourful += 1;
+  }
+  return meaningful > 100 && colourful / meaningful >= 0.18;
+}
