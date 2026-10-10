@@ -6,6 +6,45 @@ import { loadBox, saveBox } from "./supabase-box.js";
 import { supabaseConfig } from "./supabase-config.js";
 import { createReferenceIconLoader } from "./reference-icons.js";
 import { rankColourMatches } from './icon-comparison.js';
+import { createCharacterDetailsLoader, detailFields } from './character-details.js';
+const loadCharacterDetails = createCharacterDetailsLoader();
+let detailRequest = 0;
+function makeCharacterTappable(root, ids) {
+  [...root.children].forEach((row, index) => {
+    if (!ids[index]) return;
+    for (const element of row.querySelectorAll('.avatar, .char-info')) {
+      const button = document.createElement('button'); button.type = 'button';
+      button.className = element.className + ' character-open';
+      button.dataset.detailCharacter = ids[index]; button.setAttribute('aria-label', 'キャラのステータスを見る');
+      button.append(...element.childNodes); element.replaceWith(button);
+    }
+  });
+}
+async function showCharacterDetails(id) {
+  const character = characterFor(id); if (!character) return;
+  const request = ++detailRequest;
+  const dialog = $('#character-detail');
+  $('#detail-title').textContent = character.name;
+  $('#detail-icon').textContent = character.attribute || '?';
+  $('#detail-icon').dataset.referenceIcon = id;
+  $('#detail-fields').replaceChildren(); $('#detail-source').hidden = true;
+  $('#detail-message').textContent = 'ステータスを読み込んでいます…';
+  if (!dialog.open) dialog.showModal();
+  hydrateReferenceIcons(dialog);
+  try {
+    const details = await loadCharacterDetails(id);
+    if (request !== detailRequest || !dialog.open) return;
+    for (const [label, value] of detailFields(character, details)) {
+      const term = document.createElement('dt'); term.textContent = label;
+      const description = document.createElement('dd'); description.textContent = value;
+      $('#detail-fields').append(term, description);
+    }
+    $('#detail-message').textContent = details.source ? `情報元：${details.source} / 取得日：${details.retrievedAt || '未登録'}` : '詳細データは未登録です。';
+    if (/^https:\/\/xn--eckwa2aa3a9c8j8bve9d\.gamewith\.jp\/article\/show\/\d+$/.test(details.sourceUrl || '')) {
+      $('#detail-source').href = details.sourceUrl; $('#detail-source').hidden = false;
+    }
+  } catch (error) { if (request === detailRequest && dialog.open) $('#detail-message').textContent = error.message; }
+}
 const referencePixels = new Map();
 function colourPixels(canvas) {
   const small = document.createElement('canvas'); small.width = 16; small.height = 16;
@@ -100,6 +139,8 @@ function renderBox() {
   $("#owned-total").textContent = `${state.accounts[account].reduce((sum, item) => sum + item.quantity, 0)}体`;
   $("#box-list").innerHTML = items.length ? items.map(({ character, quantity }) => `<div class="box-row"><div class="avatar">${character.attribute}</div><div class="char-info"><strong>${character.name}</strong><small>${character.form} · ${character.type}</small></div><strong>×${quantity}</strong></div>`).join("") : `<p class="empty">まだ登録されていません</p>`;
   document.querySelectorAll('#box-list .avatar').forEach((el, index) => { el.dataset.referenceIcon = items[index].character.id; });
+  makeCharacterTappable($('#box-list'), items.map(item => item.character.id));
+  document.querySelectorAll('#box-list .avatar').forEach((el, index) => { el.dataset.referenceIcon = items[index].character.id; });
   hydrateReferenceIcons($('#box-list'));
 }
 function renderCandidates() {
@@ -108,6 +149,8 @@ function renderCandidates() {
   $("#candidate-list").innerHTML = candidates.length ? candidates.map((item, index) => `<div class="candidate"><div class="avatar">${item.attribute}</div><div class="char-info"><strong>${item.name}</strong><small>${item.form} · ${item.source === "filename" ? "ファイル名から候補化" : "手動追加"}</small></div><input class="qty" aria-label="${item.name}の所持数" min="1" type="number" value="${item.quantity}" data-index="${index}"><button class="remove" title="削除" data-remove="${index}">×</button></div>`).join("") : `<p class="empty">自動候補がありません。下の検索から追加してください。</p>`;
   document.querySelectorAll(".qty").forEach((input) => input.addEventListener("change", (event) => { candidates[Number(event.target.dataset.index)].quantity = Math.max(1, Number(event.target.value) || 1); renderCandidates(); }));
   document.querySelectorAll("[data-remove]").forEach((button) => button.addEventListener("click", () => { candidates.splice(Number(button.dataset.remove), 1); renderCandidates(); }));
+  document.querySelectorAll('#candidate-list .avatar').forEach((el, index) => { el.dataset.referenceIcon = candidates[index].id; });
+  makeCharacterTappable($('#candidate-list'), candidates.map(item => item.id));
   document.querySelectorAll('#candidate-list .avatar').forEach((el, index) => { el.dataset.referenceIcon = candidates[index].id; });
   hydrateReferenceIcons($('#candidate-list'));
 }
@@ -239,6 +282,18 @@ $("#add-character").addEventListener("click", () => { try { const name = $("#cha
 $("#save-box").addEventListener("click", async () => { if (!candidates.length) return flash("保存するキャラを追加してください"); state = saveCandidates(state, account, candidates); persist(); if (session && remoteAccounts && remoteCatalogueReady) { try { await saveBox(session, remoteAccounts, state); } catch { flash("端末には保存しました。サーバー同期は後でもう一度試します。"); } } candidates = []; unknownSlots = []; files = []; $("#screenshots").value = ""; $("#selected-files").innerHTML = ""; $("#review-section").classList.add("hidden"); renderAccount(); flash(`${account === "main" ? "メイン" : "サブ"}BOXへ保存しました`); });
 document.querySelectorAll(".account").forEach((button) => button.addEventListener("click", () => { account = button.dataset.account; renderAccount(); }));
 $("#box-search").addEventListener("input", renderBox);
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-detail-character]');
+  if (button) void showCharacterDetails(button.dataset.detailCharacter);
+});
+$('#detail-close').addEventListener('click', () => $('#character-detail').close());
+$('#character-detail').addEventListener('click', event => {
+  if (event.target === event.currentTarget) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) event.currentTarget.close();
+  }
+});
+$('#character-detail').addEventListener('close', () => { detailRequest++; });
 $("#sign-in").addEventListener("click", async () => { try { await activateSession(await signIn($("#auth-email").value, $("#auth-password").value)); } catch (error) { flash(error.message); } });
 $("#sign-up").addEventListener("click", async () => { try { const result = await signUp($("#auth-email").value, $("#auth-password").value); if (result.access_token) await activateSession(result); else flash("確認メールを開いた後、ログインしてください"); } catch (error) { flash(error.message); } });
 $("#sign-out").addEventListener("click", () => { clearSession(); session = null; user = null; remoteAccounts = null; renderAuth(); flash("ログアウトしました"); });
@@ -253,3 +308,5 @@ if (session) {
 }
 renderAuth();
 renderAccount();
+const requestedCharacter = new URLSearchParams(location.hash.slice(1)).get('character');
+if (requestedCharacter) void showCharacterDetails(requestedCharacter);
