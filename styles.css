@@ -19,3 +19,6 @@
 .character-detail dt, .character-detail dd { margin: 0; padding: 10px 4px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .character-detail dt { color: var(--muted); }
 .character-detail a { color: var(--mint); }
+.box-sort-control { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+.box-sort-control label { color: var(--muted); font-size: .85rem; }
+.box-sort-control select { flex: 1; min-height: 44px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: #0d1730; font: inherit; }
