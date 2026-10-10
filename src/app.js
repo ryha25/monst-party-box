@@ -155,6 +155,7 @@ function renderUnknownSlots() {
       void storePersonalReference(unknownSlots[Number(button.dataset.slotManual)], character).catch(() => {});
       renderCandidates(); renderUnknownSlots();
     }));
+  }));
     document.querySelectorAll("[data-slot-match]").forEach((button) => button.addEventListener("click", () => {
       const slotIndex = Number(button.dataset.slotMatch); const match = unknownSlots[slotIndex].matches[Number(button.dataset.matchIndex)];
       const character = characterFor(match.characterId) || registerManualCharacter(match.characterName);
@@ -162,7 +163,6 @@ function renderUnknownSlots() {
       unknownSlots[slotIndex].added = true;
       renderCandidates(); renderUnknownSlots();
     }));
-  }));
 }
 $("#screenshots").addEventListener("change", (event) => {
   files = [...event.target.files]; $("#analyse").disabled = files.length === 0;
