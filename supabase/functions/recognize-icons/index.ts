@@ -69,8 +69,8 @@ Deno.serve(async (request) => {
       candidates: references
         .map((reference) => ({ characterId: reference.characterId, characterName: reference.characterName, distance: hammingDistance(icon.fingerprint, reference.fingerprint), source: reference.source }))
         .sort((a, b) => a.distance - b.distance)
-        .filter((candidate, index, list) => candidate.distance <= 14 && list.findIndex((item) => item.characterId === candidate.characterId) === index)
-        .slice(0, 3)
+        .filter((candidate, index, list) => candidate.distance <= 18 && list.findIndex((item) => item.characterId === candidate.characterId) === index)
+        .slice(0, 12)
     }));
     return Response.json({ matches }, { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
