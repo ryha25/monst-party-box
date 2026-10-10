@@ -1,10 +1,30 @@
 import { characters } from "./catalog.js";
-import { boxGridRegions, createManualCharacter, emptyState, findCharacters, iconArtworkRegion, isLikelyColorIcon, mergeCandidates, normalize, recognizeFromFiles, saveCandidates } from "./box-service.js";
+import { detectBoxGridRegions, createManualCharacter, emptyState, findCharacters, iconArtworkRegion, isLikelyColorIcon, mergeCandidates, normalize, recognizeFromFiles, saveCandidates } from "./box-service.js";
 import { loadRemoteCharacters } from "./supabase-catalog.js";
 import { clearSession, getStoredSession, getUser, signIn, signUp } from "./supabase-auth.js";
 import { loadBox, saveBox } from "./supabase-box.js";
 import { supabaseConfig } from "./supabase-config.js";
 import { createReferenceIconLoader } from "./reference-icons.js";
+import { rankColourMatches } from './icon-comparison.js';
+const referencePixels = new Map();
+function colourPixels(canvas) {
+  const small = document.createElement('canvas'); small.width = 16; small.height = 16;
+  const context = small.getContext('2d', { willReadFrequently: true });
+  context.drawImage(canvas, 0, 0, 16, 16);
+  return [...context.getImageData(0, 0, 16, 16).data].filter((_, index) => index % 4 !== 3);
+}
+async function compareReferenceColours(slots) {
+  const ids = slots.flatMap(slot => slot.matches.map(match => match.characterId));
+  const images = await loadReferenceIcons(ids, session?.access_token);
+  await Promise.all([...images].map(async ([id, url]) => {
+    if (referencePixels.has(id)) return;
+    const image = await new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = url; });
+    const canvas = document.createElement('canvas'); canvas.width = 96; canvas.height = 96;
+    canvas.getContext('2d').drawImage(image, 0, 0, 96, 96);
+    referencePixels.set(id, colourPixels(canvas));
+  }));
+  for (const slot of slots) slot.matches = rankColourMatches(slot.colourPixels, slot.matches, referencePixels);
+}
 const loadReferenceIcons = createReferenceIconLoader();
 let iconDisplayErrorShown = false;
 function hydrateReferenceIcons(root = document) {
@@ -132,7 +152,12 @@ async function createUnknownSlots(imageFiles) {
   for (const file of imageFiles) {
     try {
       const image = await loadImage(file);
-      for (const [index, card] of boxGridRegions(image.naturalWidth, image.naturalHeight).entries()) {
+      const sourceCanvas = document.createElement('canvas');
+      sourceCanvas.width = image.naturalWidth; sourceCanvas.height = image.naturalHeight;
+      const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently: true });
+      sourceContext.drawImage(image, 0, 0);
+      const pixels = sourceContext.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height).data;
+      for (const [index, card] of detectBoxGridRegions(image.naturalWidth, image.naturalHeight, pixels).entries()) {
         const region = iconArtworkRegion(card);
         const canvas = document.createElement("canvas");
         // Normalising to one size makes reference hashes independent of phone resolution.
@@ -140,7 +165,7 @@ async function createUnknownSlots(imageFiles) {
         const context = canvas.getContext("2d", { willReadFrequently: true });
         context.drawImage(image, region.x, region.y, region.width, region.height, 0, 0, 96, 96);
         if (!isLikelyColorIcon(context.getImageData(0, 0, 96, 96).data)) continue;
-        slots.push({ id: `${file.name}-${index}`, imageUrl: canvas.toDataURL("image/jpeg", 0.82), fingerprint: fingerprintCanvas(canvas), added: false, matches: [] });
+        slots.push({ id: `${file.name}-${index}`, imageUrl: canvas.toDataURL("image/jpeg", 0.82), fingerprint: fingerprintCanvas(canvas), colourPixels: colourPixels(canvas), added: false, matches: [] });
       }
     } catch { flash(`${file.name} を読み込めませんでした`); }
   }
@@ -148,7 +173,11 @@ async function createUnknownSlots(imageFiles) {
     const matches = await matchPersonalReferences(slots);
     const byId = new Map(matches.map((match) => [match.id, match.candidates]));
     slots.forEach((slot) => { slot.matches = byId.get(slot.id) || []; });
-  } catch { /* The manual naming path remains available offline. */ }
+    await compareReferenceColours(slots);
+  } catch (error) {
+    slots.forEach(slot => { slot.matches = []; });
+    flash(error.message || '画像照合に失敗しました。名前検索で修正できます。');
+  }
   return slots;
 }
 function renderUnknownSlots() {
@@ -198,7 +227,7 @@ $("#screenshots").addEventListener("change", (event) => {
 $("#analyse").addEventListener("click", async () => {
   $("#analyse").disabled = true; $("#analyse").textContent = "アイコンを切り出しています…";
   candidates = recognizeFromFiles(files, catalogue); unknownSlots = await createUnknownSlots(files); $("#review-section").classList.remove("hidden"); renderCandidates(); renderUnknownSlots();
-  $("#recognition-note").textContent = candidates.length ? "候補を作成しました。保存前に内容を確認してください。" : "この端末だけで候補化できる名前が見つかりませんでした。検索から手動追加してください。";
+  $("#recognition-note").textContent = !session ? '自動照合にはログインが必要です。未登録のキャラは名前検索で追加できます。' : '画像と色を比較した候補です。正しい名前・形態か確認して選んでください。候補がない場合は名前検索で修正できます。';
   $("#analyse").disabled = false; $("#analyse").textContent = "画像を解析して確認する";
   $("#review-section").scrollIntoView({ behavior: "smooth", block: "start" });
 });
