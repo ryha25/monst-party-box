@@ -15,7 +15,7 @@ function makeCharacterTappable(root, ids) {
     for (const element of row.querySelectorAll('.avatar, .char-info')) {
       const button = document.createElement('button'); button.type = 'button';
       button.className = element.className + ' character-open';
-      button.dataset.detailCharacter = ids[index]; button.setAttribute('aria-label', 'キャラのステータスを見る');
+      button.dataset.detailCharacter = ids[index]; button.setAttribute('aria-label', `${characterFor(ids[index])?.name || 'キャラ'}のステータスを見る`);
       button.append(...element.childNodes); element.replaceWith(button);
     }
   });
