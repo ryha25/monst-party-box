@@ -4,7 +4,7 @@ export async function loadRemoteCharacters() {
   const rows = [];
   const pageSize = 500;
   for (let offset = 0; ; offset += pageSize) {
-  const response = await fetch(`${supabaseConfig.url}/rest/v1/characters?select=id,name,form,attribute,attack_type,base:metadata->details->base,plus:metadata->details->plus,aliases:metadata->search_aliases&order=id.asc&limit=${pageSize}&offset=${offset}`, {
+  const response = await fetch(`${supabaseConfig.url}/rest/v1/characters?select=id,name,form,attribute,attack_type,base:metadata->details->base,plus:metadata->details->plus,level120:metadata->details->level120,aliases:metadata->search_aliases&order=id.asc&limit=${pageSize}&offset=${offset}`, {
     headers: {
       apikey: supabaseConfig.publishableKey,
       Authorization: `Bearer ${supabaseConfig.publishableKey}`
@@ -21,7 +21,7 @@ export async function loadRemoteCharacters() {
     form: row.form || "未設定",
     attribute: row.attribute || "未設定",
     type: row.attack_type || "未設定",
-    stats: { base: row.base || {}, plus: row.plus || {} },
+    stats: { base: row.base || {}, plus: row.plus || {}, level120: row.level120 || {} },
     aliases: row.aliases || ''
   })).sort((a,b) => Number(a.id.replace('monst-','')) - Number(b.id.replace('monst-','')));
 }
