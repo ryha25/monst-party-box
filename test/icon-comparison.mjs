@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { colourDifference, rankColourMatches } from '../src/icon-comparison.js';
+import { boxGridRegions, iconArtworkRegion, detectBoxGridRegions } from '../src/box-service.js';
+assert.equal(colourDifference([10,20,30],[10,20,30]), 0);
+assert.equal(colourDifference([0],[255]), 255);
+const refs = new Map([['correct',[200,20,30]],['wrong',[20,200,200]]]);
+assert.deepEqual(rankColourMatches([200,20,30],[{characterId:'wrong',distance:0},{characterId:'correct',distance:2}],refs).map(x=>x.characterId), ['correct']);
+assert.deepEqual(rankColourMatches([0,0,0],[{characterId:'missing',distance:0}],refs), []);
+const card = boxGridRegions(590,1280)[0];
+assert.deepEqual(card,{x:33,y:392,width:87,height:87});
+assert.deepEqual(iconArtworkRegion(card),{x:47,y:409,width:61,height:56});
+const pixels = new Uint8Array(590*1280*4);
+for (let y=400;y<405;y++) for(let c=0;c<5;c++) pixels[(y*590+Math.round(590*(.063+.181*c)))*4]=255;
+assert.equal(detectBoxGridRegions(590,1280,pixels)[0].y,400);
+assert.ok(detectBoxGridRegions(590,1280,pixels).every(r=>r.y+r.height<1280*.9));
+console.log('Aligned crop geometry, frame detection and colour rejection passed');
