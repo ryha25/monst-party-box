@@ -1,7 +1,7 @@
 import { characters } from "./catalog.js";
-import { renderBoxGrid } from './box-grid.js?v=20261011-catalogue';
+import { renderBoxGrid } from './box-grid.js?v=20261011-catalogue2';
 import { sortBoxItems, detectBoxGridRegions, createManualCharacter, emptyState, findCharacters, iconArtworkRegion, isLikelyColorIcon, mergeCandidates, normalize, recognizeFromFiles, saveCandidates } from "./box-service.js?v=20261011-catalogue";
-import { loadRemoteCharacters } from "./supabase-catalog.js?v=20261011-catalogue";
+import { loadRemoteCharacters } from "./supabase-catalog.js?v=20261011-catalogue2";
 import { clearSession, getStoredSession, getUser, signIn, signUp } from "./supabase-auth.js";
 import { loadBox, saveBox } from "./supabase-box.js";
 import { supabaseConfig } from "./supabase-config.js";
