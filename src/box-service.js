@@ -1,5 +1,22 @@
 export function emptyState() { return { accounts: { main: [], sub: [] } }; }
 
+export function characterNumber(character) {
+  const match = character?.id?.match(/^monst-(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+export function sortBoxItems(items, mode = 'number') {
+  const attributeOrder = { 火: 0, 水: 1, 木: 2, 光: 3, 闇: 4 };
+  const number = item => characterNumber(item.character) ?? Number.MAX_SAFE_INTEGER;
+  return [...items].sort((left, right) => {
+    if (mode === 'attribute') {
+      const difference = (attributeOrder[left.character?.attribute] ?? 5) - (attributeOrder[right.character?.attribute] ?? 5);
+      if (difference) return difference;
+    }
+    return number(left) - number(right) || (left.character?.name || '').localeCompare(right.character?.name || '', 'ja');
+  });
+}
+
 export function normalize(text = "") { return text.toLocaleLowerCase("ja-JP").replace(/[\s　・・_\-]/g, ""); }
 
 export function findCharacters(query, catalog) {
