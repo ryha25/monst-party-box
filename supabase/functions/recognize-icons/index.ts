@@ -44,16 +44,22 @@ Deno.serve(async (request) => {
     const icons = body.icons?.filter((icon) => /^[0-9a-f]{16}$/i.test(icon.fingerprint)) ?? [];
     if (!icons.length) return Response.json({ error: "icons must contain 16-character hexadecimal fingerprints" }, { status: 400, headers: corsHeaders });
 
-    // Officially sourced, canonical references are shared by every user. Personal
+    // User-supplied picture-book references are shared by every user. Personal
     // references remain a helpful supplement for a screenshot's device-specific UI.
-    const [{ data: catalogueData, error: catalogueError }, { data: personalData, error: personalError }] = await Promise.all([
-      client.from("character_icons").select("character_id, perceptual_hash, characters(name)").not("perceptual_hash", "is", null),
-      client.from("personal_icon_references").select("character_id, character_name, perceptual_hash").eq("user_id", authData.user.id)
-    ]);
-    if (catalogueError) throw catalogueError;
-    if (personalError) throw personalError;
-    const canonical = (catalogueData ?? []) as CatalogueIcon[];
-    const personal = (personalData ?? []) as PersonalReference[];
+    const canonical: CatalogueIcon[] = [];
+    const personal: PersonalReference[] = [];
+    for (let offset = 0; ; offset += 500) {
+      const { data, error } = await client.from("character_icons").select("character_id, perceptual_hash, characters(name)").not("perceptual_hash", "is", null).order("character_id").range(offset, offset + 499);
+      if (error) throw error;
+      canonical.push(...(data ?? []) as unknown as CatalogueIcon[]);
+      if (!data || data.length < 500) break;
+    }
+    for (let offset = 0; ; offset += 500) {
+      const { data, error } = await client.from("personal_icon_references").select("character_id, character_name, perceptual_hash").eq("user_id", authData.user.id).order("character_id").order("perceptual_hash").range(offset, offset + 499);
+      if (error) throw error;
+      personal.push(...(data ?? []) as PersonalReference[]);
+      if (!data || data.length < 500) break;
+    }
     const references = [
       ...canonical.map((reference) => ({ characterId: reference.character_id, characterName: reference.characters?.name || reference.character_id, fingerprint: reference.perceptual_hash, source: "catalogue" })),
       ...personal.map((reference) => ({ characterId: reference.character_id, characterName: reference.character_name, fingerprint: reference.perceptual_hash, source: "personal" }))
@@ -63,6 +69,7 @@ Deno.serve(async (request) => {
       candidates: references
         .map((reference) => ({ characterId: reference.characterId, characterName: reference.characterName, distance: hammingDistance(icon.fingerprint, reference.fingerprint), source: reference.source }))
         .sort((a, b) => a.distance - b.distance)
+        .filter((candidate, index, list) => candidate.distance <= 14 && list.findIndex((item) => item.characterId === candidate.characterId) === index)
         .slice(0, 3)
     }));
     return Response.json({ matches }, { headers: { ...corsHeaders, "Content-Type": "application/json" } });
