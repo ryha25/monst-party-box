@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ja">
-  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>MONST BOX</title><link rel="stylesheet" href="styles.css?v=20261011-grid" /></head>
+  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>MONST BOX</title><link rel="stylesheet" href="styles.css?v=20261011-catalogue" /></head>
   <body>
     <main class="shell">
       <header><p class="eyebrow">PERSONAL PARTY BUILDER · PHASE 1</p><h1>MONST BOX</h1><p class="sub">スクショから、メイン・サブのBOXを育てよう</p></header>
@@ -42,6 +42,14 @@
         <p class="hint">横5列のアイコン表示です。キャラをタップするとステータスが開きます。</p>
         <div id="box-list" class="box-list"></div>
       </section>
+      <section class="card box-card" aria-labelledby="catalogue-title">
+        <h2 id="catalogue-title">キャラ図鑑</h2>
+        <p class="hint">所持BOXとは別の一覧です。No.または名前で検索し、タップしてステータスを確認できます。アイコン未登録は文字表示です。</p>
+        <input id="catalogue-search" placeholder="例：1 / No.6036 / ルシファー" autocomplete="off" />
+        <p id="catalogue-count" class="hint"></p>
+        <div id="catalogue-list" class="box-list"></div>
+        <div class="auth-actions"><button id="catalogue-prev" class="secondary">前の50件</button><button id="catalogue-next" class="secondary">次の50件</button></div>
+      </section>
       <p id="toast" role="status" class="toast"></p>
     </main>
     <dialog id="character-detail" class="character-detail" aria-labelledby="detail-title">
@@ -52,6 +60,6 @@
       <p class="hint">図鑑の基準値です。わくわくの実・紋章・ゲージ成功・クエスト中の補正は含みません。未登録の項目は推測しません。</p>
       <a id="detail-source" target="_blank" rel="noopener noreferrer" hidden>GameWithで情報を確認</a>
     </dialog>
-    <script type="module" src="src/app.js?v=20261011-grid"></script>
+    <script type="module" src="src/app.js?v=20261011-catalogue"></script>
   </body>
 </html>
