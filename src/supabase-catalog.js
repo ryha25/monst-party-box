@@ -1,14 +1,20 @@
 import { supabaseConfig } from "./supabase-config.js";
 
 export async function loadRemoteCharacters() {
-  const response = await fetch(`${supabaseConfig.url}/rest/v1/characters?select=id,name,form,attribute,attack_type&order=name.asc`, {
+  const rows = [];
+  const pageSize = 500;
+  for (let offset = 0; ; offset += pageSize) {
+  const response = await fetch(`${supabaseConfig.url}/rest/v1/characters?select=id,name,form,attribute,attack_type&order=id.asc&limit=${pageSize}&offset=${offset}`, {
     headers: {
       apikey: supabaseConfig.publishableKey,
       Authorization: `Bearer ${supabaseConfig.publishableKey}`
     }
   });
   if (!response.ok) throw new Error(`Character catalogue request failed (${response.status})`);
-  const rows = await response.json();
+  const page = await response.json();
+  rows.push(...page);
+  if (page.length < pageSize) break;
+  }
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
