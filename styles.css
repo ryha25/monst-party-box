@@ -8,6 +8,7 @@
 .reference-thumb img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; }
 .character-open { cursor: pointer; border: 0; padding: 0; color: inherit; text-align: left; font: inherit; min-height: 44px; }
 .character-open.char-info { background: transparent; }
+.character-open.avatar { width: 44px; height: 44px; }
 .character-open:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
 .character-detail { width: min(560px, calc(100% - 24px)); max-height: 88dvh; border: 1px solid var(--line); border-radius: 18px; padding: 20px; color: var(--ink); background: var(--navy); overflow: auto; }
 .character-detail::backdrop { background: #000b; }
