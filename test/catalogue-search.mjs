@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {findCharacters} from '../src/box-service.js';
+import {renderBoxGrid} from '../src/box-grid.js';
+const rows=[{id:'monst-1',name:'フォノー',aliases:'ふぉのー',stats:{base:{hp:1380,attack:1566,speed:84.13},plus:{hp:270,attack:300,speed:17}}},{id:'monst-11',name:'ハッパー'}];
+assert.equal(findCharacters('1',rows)[0].id,'monst-1');
+assert.equal(findCharacters('No.1',rows).length,1);
+assert.equal(findCharacters('ふぉのー',rows).length,1);
+assert.equal(findCharacters('',rows).length,0);
+const html=renderBoxGrid([{character:rows[0],quantity:0}]);
+assert(html.includes('HP 1650'));assert(html.includes('速度 101.13'));
+assert(!html.includes('×0'));assert(html.includes('icon-placeholder'));
+console.log('Catalogue search: exact numbers, aliases and missing-icon stat placeholders passed');
