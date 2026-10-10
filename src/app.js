@@ -1,5 +1,6 @@
 import { characters } from "./catalog.js";
-import { characterNumber, sortBoxItems, detectBoxGridRegions, createManualCharacter, emptyState, findCharacters, iconArtworkRegion, isLikelyColorIcon, mergeCandidates, normalize, recognizeFromFiles, saveCandidates } from "./box-service.js?v=20261011-sort";
+import { renderBoxGrid } from './box-grid.js?v=20261011-grid';
+import { sortBoxItems, detectBoxGridRegions, createManualCharacter, emptyState, findCharacters, iconArtworkRegion, isLikelyColorIcon, mergeCandidates, normalize, recognizeFromFiles, saveCandidates } from "./box-service.js?v=20261011-sort";
 import { loadRemoteCharacters } from "./supabase-catalog.js";
 import { clearSession, getStoredSession, getUser, signIn, signUp } from "./supabase-auth.js";
 import { loadBox, saveBox } from "./supabase-box.js";
@@ -141,10 +142,7 @@ function renderBox() {
   const term = $("#box-search").value || "";
   const items = sortBoxItems(state.accounts[account].map((item) => ({ ...item, character: characterFor(item.characterId) })).filter((item) => item.character && (!term || item.character.name.includes(term))), boxSortModes[account]);
   $("#owned-total").textContent = `${state.accounts[account].reduce((sum, item) => sum + item.quantity, 0)}体`;
-  $("#box-list").innerHTML = items.length ? items.map(({ character, quantity }) => `<div class="box-row"><div class="avatar">${character.attribute}</div><div class="char-info"><strong>${character.name}</strong><small>${characterNumber(character) !== null ? `No.${characterNumber(character)} · ` : ''}${character.form} · ${character.type}</small></div><strong>×${quantity}</strong></div>`).join("") : `<p class="empty">まだ登録されていません</p>`;
-  document.querySelectorAll('#box-list .avatar').forEach((el, index) => { el.dataset.referenceIcon = items[index].character.id; });
-  makeCharacterTappable($('#box-list'), items.map(item => item.character.id));
-  document.querySelectorAll('#box-list .avatar').forEach((el, index) => { el.dataset.referenceIcon = items[index].character.id; });
+  $("#box-list").innerHTML = renderBoxGrid(items);
   hydrateReferenceIcons($('#box-list'));
 }
 function renderCandidates() {
