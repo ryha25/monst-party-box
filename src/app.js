@@ -1,5 +1,5 @@
 import { characters } from "./catalog.js";
-import { detectBoxGridRegions, createManualCharacter, emptyState, findCharacters, iconArtworkRegion, isLikelyColorIcon, mergeCandidates, normalize, recognizeFromFiles, saveCandidates } from "./box-service.js";
+import { characterNumber, sortBoxItems, detectBoxGridRegions, createManualCharacter, emptyState, findCharacters, iconArtworkRegion, isLikelyColorIcon, mergeCandidates, normalize, recognizeFromFiles, saveCandidates } from "./box-service.js?v=20261011-sort";
 import { loadRemoteCharacters } from "./supabase-catalog.js";
 import { clearSession, getStoredSession, getUser, signIn, signUp } from "./supabase-auth.js";
 import { loadBox, saveBox } from "./supabase-box.js";
@@ -83,6 +83,9 @@ const key = "monst-party-box-phase1";
 const manualCharactersKey = "monst-party-box-manual-characters";
 let state = JSON.parse(localStorage.getItem(key) || "null") || emptyState();
 let account = "main";
+const sortStorageKey = 'monst-party-box-sort';
+let boxSortModes = {};
+try { boxSortModes = JSON.parse(localStorage.getItem(sortStorageKey) || '{}') || {}; } catch { /* Use number order when stored preferences are invalid. */ }
 let files = [];
 let candidates = [];
 let unknownSlots = [];
@@ -131,13 +134,14 @@ async function activateSession(nextSession) {
 function renderAccount() {
   document.querySelectorAll(".account").forEach((button) => { const isCurrent = button.dataset.account === account; button.classList.toggle("active", isCurrent); const count = state.accounts[button.dataset.account].reduce((sum, item) => sum + item.quantity, 0); button.querySelector("small").textContent = `${count}体登録`; });
   $("#box-title").textContent = `${account === "main" ? "メイン" : "サブ"}BOX`;
+  if ($('#box-sort')) $('#box-sort').value = boxSortModes[account] === 'attribute' ? 'attribute' : 'number';
   renderBox();
 }
 function renderBox() {
   const term = $("#box-search").value || "";
-  const items = state.accounts[account].map((item) => ({ ...item, character: characterFor(item.characterId) })).filter((item) => item.character && (!term || item.character.name.includes(term)));
+  const items = sortBoxItems(state.accounts[account].map((item) => ({ ...item, character: characterFor(item.characterId) })).filter((item) => item.character && (!term || item.character.name.includes(term))), boxSortModes[account]);
   $("#owned-total").textContent = `${state.accounts[account].reduce((sum, item) => sum + item.quantity, 0)}体`;
-  $("#box-list").innerHTML = items.length ? items.map(({ character, quantity }) => `<div class="box-row"><div class="avatar">${character.attribute}</div><div class="char-info"><strong>${character.name}</strong><small>${character.form} · ${character.type}</small></div><strong>×${quantity}</strong></div>`).join("") : `<p class="empty">まだ登録されていません</p>`;
+  $("#box-list").innerHTML = items.length ? items.map(({ character, quantity }) => `<div class="box-row"><div class="avatar">${character.attribute}</div><div class="char-info"><strong>${character.name}</strong><small>${characterNumber(character) !== null ? `No.${characterNumber(character)} · ` : ''}${character.form} · ${character.type}</small></div><strong>×${quantity}</strong></div>`).join("") : `<p class="empty">まだ登録されていません</p>`;
   document.querySelectorAll('#box-list .avatar').forEach((el, index) => { el.dataset.referenceIcon = items[index].character.id; });
   makeCharacterTappable($('#box-list'), items.map(item => item.character.id));
   document.querySelectorAll('#box-list .avatar').forEach((el, index) => { el.dataset.referenceIcon = items[index].character.id; });
@@ -282,6 +286,11 @@ $("#add-character").addEventListener("click", () => { try { const name = $("#cha
 $("#save-box").addEventListener("click", async () => { if (!candidates.length) return flash("保存するキャラを追加してください"); state = saveCandidates(state, account, candidates); persist(); if (session && remoteAccounts && remoteCatalogueReady) { try { await saveBox(session, remoteAccounts, state); } catch { flash("端末には保存しました。サーバー同期は後でもう一度試します。"); } } candidates = []; unknownSlots = []; files = []; $("#screenshots").value = ""; $("#selected-files").innerHTML = ""; $("#review-section").classList.add("hidden"); renderAccount(); flash(`${account === "main" ? "メイン" : "サブ"}BOXへ保存しました`); });
 document.querySelectorAll(".account").forEach((button) => button.addEventListener("click", () => { account = button.dataset.account; renderAccount(); }));
 $("#box-search").addEventListener("input", renderBox);
+$('#box-sort')?.addEventListener('change', event => {
+  boxSortModes[account] = event.target.value === 'attribute' ? 'attribute' : 'number';
+  localStorage.setItem(sortStorageKey, JSON.stringify(boxSortModes));
+  renderBox();
+});
 document.addEventListener('click', event => {
   const button = event.target.closest('[data-detail-character]');
   if (button) void showCharacterDetails(button.dataset.detailCharacter);
