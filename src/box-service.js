@@ -55,20 +55,18 @@ export function saveCandidates(state, account, candidates) {
 export function boxGridRegions(width, height, columns = 5, rows = 7) {
   // BOX cards are square. Deriving both axes from the horizontal pitch avoids
   // stretching a card when the screenshot contains a variable-height bottom UI.
-  const left = width * 0.053;
-  const top = height * 0.305;
-  const cellWidth = (width * 0.89) / columns;
-  const cellHeight = cellWidth;
-  const insetX = cellWidth * 0.08;
-  const insetY = cellHeight * 0.055;
+  const left = width * 0.056;
+  const top = height * 0.30625;
+  const pitch = width * 0.181;
+  const side = width * 0.148;
   return Array.from({ length: columns * rows }, (_, index) => {
     const column = index % columns;
     const row = Math.floor(index / columns);
     return {
-      x: Math.round(left + column * cellWidth + insetX),
-      y: Math.round(top + row * cellHeight + insetY),
-      width: Math.round(cellWidth - insetX * 2),
-      height: Math.round(cellHeight - insetY * 2)
+      x: Math.round(left + column * pitch),
+      y: Math.round(top + row * pitch),
+      width: Math.round(side),
+      height: Math.round(side)
     };
   });
 }
@@ -77,11 +75,32 @@ export function boxGridRegions(width, height, columns = 5, rows = 7) {
 // lock, level and luck badges change from one player screenshot to another.
 export function iconArtworkRegion(card) {
   return {
-    x: Math.round(card.x + card.width * 0.15),
-    y: Math.round(card.y + card.height * 0.12),
+    x: Math.round(card.x + card.width * 0.16),
+    y: Math.round(card.y + card.height * 0.20),
     width: Math.round(card.width * 0.70),
-    height: Math.round(card.height * 0.68)
+    height: Math.round(card.height * 0.64)
   };
+}
+
+export function detectBoxGridRegions(width, height, rgba) {
+  const regions = boxGridRegions(width, height);
+  let run = 0;
+  for (let y = Math.round(height * .28); y < Math.min(height, Math.round(height * .43)); y++) {
+    let coloured = 0;
+    for (let col = 0; col < 5; col++) {
+      const x = Math.round(width * (.063 + .181 * col));
+      const offset = (y * width + x) * 4;
+      const max = Math.max(rgba[offset], rgba[offset+1], rgba[offset+2]);
+      const min = Math.min(rgba[offset], rgba[offset+1], rgba[offset+2]);
+      if (max > 100 && max - min > 60) coloured++;
+    }
+    run = coloured >= 3 ? run + 1 : 0;
+    if (run >= 4) {
+      const top = y - 3;
+      return regions.map(r => ({ ...r, y: r.y + top - regions[0].y })).filter(r => r.y + r.height < height * .9);
+    }
+  }
+  return regions.filter(r => r.y + r.height < height * .9);
 }
 
 // Unobtained monsters in the picture book are rendered nearly monochrome.
