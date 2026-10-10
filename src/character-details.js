@@ -34,7 +34,8 @@ export function createCharacterDetailsLoader() {
       headers: { apikey: supabaseConfig.publishableKey, Authorization: `Bearer ${supabaseConfig.publishableKey}` }
     });
     if (!response.ok) throw new Error(`ステータスを取得できませんでした (${response.status})`);
-    const details = (await response.json())[0]?.metadata?.details || {};
+    const metadata = (await response.json())[0]?.metadata || {};
+    const details = metadata.details || (metadata.name_source ? {source:metadata.name_source,sourceUrl:metadata.name_source_url} : {});
     cache.set(id, details);
     return details;
   };
