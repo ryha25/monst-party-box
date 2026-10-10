@@ -38,10 +38,19 @@
       <section class="card box-card" aria-labelledby="box-title">
         <div class="section-heading"><div><p class="kicker">CURRENT BOX</p><h2 id="box-title">メインBOX</h2></div><span id="owned-total" class="pill">0体</span></div>
         <input id="box-search" class="box-search" placeholder="登録済みキャラを検索" autocomplete="off" />
+        <p class="hint">アイコン・名前をタップするとステータスが開きます。</p>
         <div id="box-list" class="box-list"></div>
       </section>
       <p id="toast" role="status" class="toast"></p>
     </main>
+    <dialog id="character-detail" class="character-detail" aria-labelledby="detail-title">
+      <div class="detail-toolbar"><p class="kicker">CHARACTER STATUS</p><button id="detail-close" class="secondary" aria-label="キャラ詳細を閉じる">閉じる</button></div>
+      <div class="detail-heading"><div id="detail-icon" class="avatar"></div><h2 id="detail-title"></h2></div>
+      <p id="detail-message" class="muted" role="status"></p>
+      <dl id="detail-fields"></dl>
+      <p class="hint">図鑑の基準値です。わくわくの実・紋章・ゲージ成功・クエスト中の補正は含みません。未登録の項目は推測しません。</p>
+      <a id="detail-source" target="_blank" rel="noopener noreferrer" hidden>GameWithで情報を確認</a>
+    </dialog>
     <script type="module" src="src/app.js"></script>
   </body>
 </html>
