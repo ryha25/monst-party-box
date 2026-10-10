@@ -26,7 +26,12 @@ export async function loadBox(session, user) {
   const accounts = await ensureAccounts(session, user);
   const state = { accounts: { main: [], sub: [] } };
   for (const account of accounts) {
-    const entries = await request(`account_characters?account_id=eq.${account.id}&select=character_id,quantity`, session);
+    const entries = [];
+    for (let offset = 0; ; offset += 500) {
+      const page = await request(`account_characters?account_id=eq.${account.id}&select=character_id,quantity&order=character_id.asc&limit=500&offset=${offset}`, session);
+      entries.push(...page);
+      if (page.length < 500) break;
+    }
     state.accounts[account.slot] = entries.map((entry) => ({ characterId: entry.character_id, quantity: entry.quantity }));
   }
   return { state, accounts };
