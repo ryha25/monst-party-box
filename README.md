@@ -51,6 +51,8 @@ Supabase Dashboard の **Authentication > URL Configuration** で Site URL と R
 
 ## テスト
 
+`node test/reference-icons.mjs` で図鑑アイコン取得のログイン必須・キャッシュ・100件単位の取得・エラー処理を確認できます。図鑑画像は既存BOX所有者のみ閲覧でき、候補と保存済みBOXに表示します。未確定カード上部は入力スクショの切り抜き、各候補の横は登録済み図鑑画像です。`supabase/reference-icon-access.sql` はクラウド migration `box_owner_reference_icon_display` の内容です。個人専用参照画像の権限は変更していません。
+
 ```powershell
 & 'C:\Users\ryuya\.cache\codex-runtimes\codex-primary-runtime\dependencies\bin\fallback\pnpm.cmd' test
 ```
