@@ -22,3 +22,19 @@
 .box-sort-control { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
 .box-sort-control label { color: var(--muted); font-size: .85rem; }
 .box-sort-control select { flex: 1; min-height: 44px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: #0d1730; font: inherit; }
+/* Left-to-right, five-column layout mirrors the game's monster BOX. */
+.box-card { padding: 12px; }
+.box-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px 6px; margin-top: 14px; align-items: start; }
+.box-list > .empty { grid-column: 1 / -1; }
+.box-tile { display: flex; flex-direction: column; width: 100%; min-width: 0; align-items: stretch; background: transparent; text-align: center; border-radius: 6px; }
+.box-icon-wrap { position: relative; display: block; aspect-ratio: 1; border: 2px solid #71829b; border-radius: 8px; background: #0d1730; }
+.box-icon-wrap[data-attribute="火"] { border-color: #ff646f; }
+.box-icon-wrap[data-attribute="水"] { border-color: #4aafff; }
+.box-icon-wrap[data-attribute="木"] { border-color: #65d890; }
+.box-icon-wrap[data-attribute="光"] { border-color: #f4d262; }
+.box-icon-wrap[data-attribute="闇"] { border-color: #bd8bff; }
+.box-tile .avatar { width: 100%; height: 100%; border-radius: 5px; font-size: .85rem; }
+.box-quantity { position: absolute; right: 0; bottom: 0; padding: 1px 4px; border-radius: 4px 0 4px 0; background: #071020df; color: #fff; font-size: .7rem; line-height: 1.3; font-weight: 800; pointer-events: none; }
+.box-number { color: var(--muted); font-size: .62rem; line-height: 1.5; white-space: nowrap; margin-top: 3px; }
+.box-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; color: var(--ink); font-size: .65rem; line-height: 1.35; }
+.box-tile:hover .box-icon-wrap { filter: brightness(1.15); }
