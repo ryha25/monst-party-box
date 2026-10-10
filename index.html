@@ -38,6 +38,7 @@
       <section class="card box-card" aria-labelledby="box-title">
         <div class="section-heading"><div><p class="kicker">CURRENT BOX</p><h2 id="box-title">メインBOX</h2></div><span id="owned-total" class="pill">0体</span></div>
         <input id="box-search" class="box-search" placeholder="登録済みキャラを検索" autocomplete="off" />
+        <div class="box-sort-control"><label for="box-sort">ソート</label><select id="box-sort"><option value="number">ナンバー順</option><option value="attribute">属性順</option></select></div>
         <p class="hint">アイコン・名前をタップするとステータスが開きます。</p>
         <div id="box-list" class="box-list"></div>
       </section>
@@ -51,6 +52,6 @@
       <p class="hint">図鑑の基準値です。わくわくの実・紋章・ゲージ成功・クエスト中の補正は含みません。未登録の項目は推測しません。</p>
       <a id="detail-source" target="_blank" rel="noopener noreferrer" hidden>GameWithで情報を確認</a>
     </dialog>
-    <script type="module" src="src/app.js"></script>
+    <script type="module" src="src/app.js?v=20261011-sort"></script>
   </body>
 </html>
