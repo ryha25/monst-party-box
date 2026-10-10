@@ -51,6 +51,8 @@ Supabase Dashboard の **Authentication > URL Configuration** で Site URL と R
 
 ## テスト
 
+`node test/icon-comparison.mjs` はBOXの枠位置検出・図鑑と同じ中央切り抜き比率・色の違う候補の除外を確認します。サーバーは輪郭の近い最大12件を返し、端末で基準画像の色を再比較して最大3件を表示します（未確定）。名前や図鑑画像の欠損・対象外キャラについては自動識別を保証しません。
+
 `node test/reference-icons.mjs` で図鑑アイコン取得のログイン必須・キャッシュ・100件単位の取得・エラー処理を確認できます。図鑑画像は既存BOX所有者のみ閲覧でき、候補と保存済みBOXに表示します。未確定カード上部は入力スクショの切り抜き、各候補の横は登録済み図鑑画像です。`supabase/reference-icon-access.sql` はクラウド migration `box_owner_reference_icon_display` の内容です。個人専用参照画像の権限は変更していません。
 
 ```powershell
