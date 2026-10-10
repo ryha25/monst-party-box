@@ -1,7 +1,7 @@
 import { characters } from "./catalog.js";
-import { renderBoxGrid } from './box-grid.js?v=20261011-grid';
-import { sortBoxItems, detectBoxGridRegions, createManualCharacter, emptyState, findCharacters, iconArtworkRegion, isLikelyColorIcon, mergeCandidates, normalize, recognizeFromFiles, saveCandidates } from "./box-service.js?v=20261011-sort";
-import { loadRemoteCharacters } from "./supabase-catalog.js";
+import { renderBoxGrid } from './box-grid.js?v=20261011-catalogue';
+import { sortBoxItems, detectBoxGridRegions, createManualCharacter, emptyState, findCharacters, iconArtworkRegion, isLikelyColorIcon, mergeCandidates, normalize, recognizeFromFiles, saveCandidates } from "./box-service.js?v=20261011-catalogue";
+import { loadRemoteCharacters } from "./supabase-catalog.js?v=20261011-catalogue";
 import { clearSession, getStoredSession, getUser, signIn, signUp } from "./supabase-auth.js";
 import { loadBox, saveBox } from "./supabase-box.js";
 import { supabaseConfig } from "./supabase-config.js";
@@ -145,6 +145,21 @@ function renderBox() {
   $("#box-list").innerHTML = renderBoxGrid(items);
   hydrateReferenceIcons($('#box-list'));
 }
+let cataloguePage = 0;
+function renderCatalogue() {
+  const term = $('#catalogue-search').value.trim();
+  const matches = term ? findCharacters(term, catalogue) : catalogue;
+  const ordered = sortBoxItems(matches.map(character=>({character,quantity:0})));
+  cataloguePage = Math.min(cataloguePage, Math.max(0, Math.ceil(ordered.length/50)-1));
+  $('#catalogue-list').innerHTML = renderBoxGrid(ordered.slice(cataloguePage*50,(cataloguePage+1)*50));
+  $('#catalogue-count').textContent = `${ordered.length}種類 / ${cataloguePage+1}ページ（図鑑No.順）`;
+  $('#catalogue-prev').disabled = cataloguePage === 0;
+  $('#catalogue-next').disabled = (cataloguePage+1)*50 >= ordered.length;
+  hydrateReferenceIcons($('#catalogue-list'));
+}
+$('#catalogue-search').addEventListener('input',()=>{cataloguePage=0;renderCatalogue();});
+$('#catalogue-prev').addEventListener('click',()=>{cataloguePage--;renderCatalogue();});
+$('#catalogue-next').addEventListener('click',()=>{cataloguePage++;renderCatalogue();});
 function renderCandidates() {
   candidates = mergeCandidates(candidates);
   $("#candidate-count").textContent = `${candidates.reduce((sum, item) => sum + item.quantity, 0)}体`;
@@ -310,6 +325,7 @@ try {
 } catch {
   // A local catalogue keeps the app usable until the first character import.
 }
+renderCatalogue();
 if (session) {
   try { await activateSession(session); } catch { session = null; user = null; clearSession(); }
 }
