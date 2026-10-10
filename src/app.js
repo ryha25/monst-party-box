@@ -4,6 +4,21 @@ import { loadRemoteCharacters } from "./supabase-catalog.js";
 import { clearSession, getStoredSession, getUser, signIn, signUp } from "./supabase-auth.js";
 import { loadBox, saveBox } from "./supabase-box.js";
 import { supabaseConfig } from "./supabase-config.js";
+import { createReferenceIconLoader } from "./reference-icons.js";
+const loadReferenceIcons = createReferenceIconLoader();
+let iconDisplayErrorShown = false;
+function hydrateReferenceIcons(root = document) {
+  const elements = [...root.querySelectorAll('[data-reference-icon]')];
+  if (!session?.access_token || !elements.length) return;
+  void loadReferenceIcons(elements.map(el => el.dataset.referenceIcon), session.access_token).then(images => {
+    for (const el of elements) {
+      const url = images.get(el.dataset.referenceIcon);
+      if (!url || !el.isConnected) continue;
+      if (el.tagName === 'IMG') el.src = url;
+      else { const image = document.createElement('img'); image.src = url; image.alt = '登録済み図鑑アイコン'; el.replaceChildren(image); }
+    }
+  }).catch(error => { if (!iconDisplayErrorShown) { iconDisplayErrorShown = true; flash(error.message); } });
+}
 
 const key = "monst-party-box-phase1";
 const manualCharactersKey = "monst-party-box-manual-characters";
@@ -64,6 +79,8 @@ function renderBox() {
   const items = state.accounts[account].map((item) => ({ ...item, character: characterFor(item.characterId) })).filter((item) => item.character && (!term || item.character.name.includes(term)));
   $("#owned-total").textContent = `${state.accounts[account].reduce((sum, item) => sum + item.quantity, 0)}体`;
   $("#box-list").innerHTML = items.length ? items.map(({ character, quantity }) => `<div class="box-row"><div class="avatar">${character.attribute}</div><div class="char-info"><strong>${character.name}</strong><small>${character.form} · ${character.type}</small></div><strong>×${quantity}</strong></div>`).join("") : `<p class="empty">まだ登録されていません</p>`;
+  document.querySelectorAll('#box-list .avatar').forEach((el, index) => { el.dataset.referenceIcon = items[index].character.id; });
+  hydrateReferenceIcons($('#box-list'));
 }
 function renderCandidates() {
   candidates = mergeCandidates(candidates);
@@ -71,6 +88,8 @@ function renderCandidates() {
   $("#candidate-list").innerHTML = candidates.length ? candidates.map((item, index) => `<div class="candidate"><div class="avatar">${item.attribute}</div><div class="char-info"><strong>${item.name}</strong><small>${item.form} · ${item.source === "filename" ? "ファイル名から候補化" : "手動追加"}</small></div><input class="qty" aria-label="${item.name}の所持数" min="1" type="number" value="${item.quantity}" data-index="${index}"><button class="remove" title="削除" data-remove="${index}">×</button></div>`).join("") : `<p class="empty">自動候補がありません。下の検索から追加してください。</p>`;
   document.querySelectorAll(".qty").forEach((input) => input.addEventListener("change", (event) => { candidates[Number(event.target.dataset.index)].quantity = Math.max(1, Number(event.target.value) || 1); renderCandidates(); }));
   document.querySelectorAll("[data-remove]").forEach((button) => button.addEventListener("click", () => { candidates.splice(Number(button.dataset.remove), 1); renderCandidates(); }));
+  document.querySelectorAll('#candidate-list .avatar').forEach((el, index) => { el.dataset.referenceIcon = candidates[index].id; });
+  hydrateReferenceIcons($('#candidate-list'));
 }
 function fingerprintCanvas(canvas) {
   const sample = document.createElement("canvas");
@@ -142,9 +161,12 @@ function renderUnknownSlots() {
     const index = Number(event.target.dataset.slotSearch);
     const matches = findCharacters(event.target.value, catalogue).slice(0, 5);
     $(`#slot-results-${index}`).innerHTML = matches.length ? matches.map((character) => `<button class="slot-result" data-slot-character="${index}" data-character="${character.id}">${character.name} <small>${character.form}</small></button>`).join("") : event.target.value.trim() ? `<button class="slot-result" data-slot-manual="${index}">「${event.target.value.trim()}」を追加</button>` : "";
+    document.querySelectorAll(`#slot-results-${index} [data-character]`).forEach(el => { const icon = document.createElement('span'); icon.className = 'reference-thumb'; icon.dataset.referenceIcon = el.dataset.character; el.prepend(icon); });
+    hydrateReferenceIcons($(`#slot-results-${index}`));
     document.querySelectorAll("[data-slot-character]").forEach((button) => button.addEventListener("click", () => {
       candidates.push({ ...characterFor(button.dataset.character), quantity: 1, source: "manual" });
       unknownSlots[Number(button.dataset.slotCharacter)].added = true;
+      unknownSlots[Number(button.dataset.slotCharacter)].characterId = button.dataset.character;
       void storePersonalReference(unknownSlots[Number(button.dataset.slotCharacter)], characterFor(button.dataset.character)).catch(() => {});
       renderCandidates(); renderUnknownSlots();
     }));
@@ -152,6 +174,7 @@ function renderUnknownSlots() {
       const character = registerManualCharacter(event.target.value);
       candidates.push({ ...character, quantity: 1, source: "manual" });
       unknownSlots[Number(button.dataset.slotManual)].added = true;
+      unknownSlots[Number(button.dataset.slotManual)].characterId = character.id;
       void storePersonalReference(unknownSlots[Number(button.dataset.slotManual)], character).catch(() => {});
       renderCandidates(); renderUnknownSlots();
     }));
@@ -161,8 +184,12 @@ function renderUnknownSlots() {
       const character = characterFor(match.characterId) || registerManualCharacter(match.characterName);
       candidates.push({ ...character, quantity: 1, source: "manual" });
       unknownSlots[slotIndex].added = true;
+      unknownSlots[slotIndex].characterId = character.id;
       renderCandidates(); renderUnknownSlots();
     }));
+  document.querySelectorAll('[data-slot-match]').forEach(el => { const match = unknownSlots[Number(el.dataset.slotMatch)].matches[Number(el.dataset.matchIndex)]; const icon = document.createElement('span'); icon.className = 'reference-thumb'; icon.dataset.referenceIcon = match.characterId; el.prepend(icon); });
+  document.querySelectorAll('#unknown-grid .unknown-card > img').forEach((el, index) => { if (unknownSlots[index].characterId) el.dataset.referenceIcon = unknownSlots[index].characterId; el.alt = '今回のスクショ切り抜き（未確定）'; });
+  hydrateReferenceIcons($('#unknown-grid'));
 }
 $("#screenshots").addEventListener("change", (event) => {
   files = [...event.target.files]; $("#analyse").disabled = files.length === 0;
