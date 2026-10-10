@@ -22,7 +22,8 @@ export function normalize(text = "") { return text.toLocaleLowerCase("ja-JP").re
 export function findCharacters(query, catalog) {
   const needle = normalize(query);
   if (!needle) return [];
-  return catalog.filter((character) => normalize(character.name).includes(needle));
+  const number = query.trim().match(/^(?:no\.?\s*)?(\d+)$/i)?.[1];
+  return catalog.filter((character) => number ? characterNumber(character) === Number(number) : normalize(character.name + ' ' + (character.aliases || '')).includes(needle));
 }
 
 export function createManualCharacter(name) {
