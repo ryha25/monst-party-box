@@ -42,4 +42,4 @@
 .icon-placeholder > span { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
 .icon-placeholder small { font-size:9px; }
 .box-icon-wrap:has(.icon-placeholder) { aspect-ratio:auto; min-height:120px; }
-.box-tile .avatar:has(.icon-placeholder) { display:block; }
+.box-tile .avatar:has(.icon-placeholder) { display:block; background:#0a182d; color:#e5efff; }
